@@ -14,8 +14,16 @@ from pymouse import *
 from pykeyboard import PyKeyboard
 from ctypes import *
 
-qqList = "qq.txt"
-qqpath = '"D:\Program Files (x86)\Tencent\QQ\Bin\QQScLauncher.exe"';
+#----------------------------config--------------------------
+QQ_LIST = "qq.txt";
+QQ_PATH = '"D:\Program Files (x86)\Tencent\QQ\Bin\QQScLauncher.exe"';
+
+# 批次执行最大间隔
+BATCH_MAX_DELTA = 10;
+# 执行最大次数,如果需要无限循环,可以调到最大
+BATCH_MAX_COUNT = 2;
+
+#==============================================================
 
 #生成调度器
 scheduler = sched.scheduler(time.time, time.sleep)
@@ -62,7 +70,7 @@ class QQ:
         qq = self.account['qq'];
         pwd = self.account['pwd'];
         # 运行QQ
-        os.system(qqpath);
+        os.system(QQ_PATH);
         time.sleep(5)
         # 获取QQ的窗口句柄
         # 参数1是类名,参数2是QQ软件的标题
@@ -139,13 +147,14 @@ class QQMgr:
 
         self.loginCount = 3;#每次登陆的数量
         self.loginIndex = 0;
+        self.executedCount = 0;
 
         self._initData();
 
     def _initData(self):
 
         #------------------------------------
-        F = open(qqList, "r").readlines()
+        F = open(QQ_LIST, "r").readlines()
         for i in F:
             tx = i.split('----')
             # print (tx[0])#打印用户名
@@ -174,22 +183,43 @@ class QQMgr:
     def doLogin(self):
         total = len(self.qqList)
 
-        if self.loginIndex < total:
+        if self.loginIndex < total and self.executedCount < BATCH_MAX_COUNT:
             endIndex = min(self.loginIndex + self.loginCount,total);
+            tmpCnt = 0
             for i in range(self.loginIndex,endIndex):
-                qq = self.qqList[i];
-                print("Start to login qq:" + qq.getQQNum());
-                while qq.loginQQ():
-                    time.sleep(3);
-                    #qq.setPInfo(self.getANewPid());
-                    print("Finished to login qq:{0} pid:{1}".format(qq.getQQNum(),qq.getPId()));
-                    break;
+                tmpCnt += 1;
+                self._doLogin(i);
 
             self.loginIndex = endIndex;
-            if self.loginIndex == total - 1:
+
+            if tmpCnt < self.loginCount and self.executedCount < BATCH_MAX_COUNT - 1:
+                self.executedCount += 1;
+                self.loginIndex = 0
+                endIndex = self.loginCount - tmpCnt;
+                for i in range(self.loginIndex, endIndex):
+                    self._doLogin(i);
+
+                self.loginIndex = endIndex;
+
+            if self.loginIndex == total:
+                self.executedCount += 1;
+                if self.executedCount < BATCH_MAX_COUNT:
+                    self.loginIndex = 0;
+                    return False;
+                return True;
+            elif self.executedCount >= BATCH_MAX_COUNT:
                 return True;
             return False;
         return True;
+
+    def _doLogin(self,index):
+        qq = self.qqList[index];
+        print("Start to login qq:" + qq.getQQNum());
+        while not qq.isLogined() and qq.loginQQ():
+            time.sleep(3);
+            # qq.setPInfo(self.getANewPid());
+            print("Finished to login qq:{0} pid:{1}".format(qq.getQQNum(), qq.getPId()));
+            break;
 
     def _doRun(self):
         # 先关闭已登陆的QQ
@@ -198,7 +228,7 @@ class QQMgr:
         flag = self.doLogin();
 
         if flag == False:
-            scheduler.enter(20,1,self._doRun);
+            scheduler.enter(BATCH_MAX_DELTA,1,self._doRun);
 
     def run(self):
         self._doRun();
