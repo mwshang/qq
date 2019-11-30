@@ -16,7 +16,6 @@ def GetWindows(title):
 
     for h, t in hwnd_title.items():
         if t is not "" and t == title:
-            print(h, t);
             arr.append({"hwnd":h,"title":t});
 
     return arr;

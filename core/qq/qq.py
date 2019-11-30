@@ -9,7 +9,11 @@ import time;
 
 from pykeyboard import PyKeyboard
 from ctypes import *
-from core.utils.config import QQ_PATH
+from core.utils.config import QQ_PATH;
+from core.utils.log import log;
+
+#win32gui.ShowWindow(QQwin,win32con.SW_HIDE)  #隐藏
+#win32gui.ShowWindow(QQwin,win32con.SW_SHOW)  #显示
 
 class QQ:
     '''
@@ -119,7 +123,7 @@ class QQ:
                 cmd = "taskkill /pid {0} /f".format(p["pid"]);
                 os.system(cmd);
 
-            print("successed to close qq:{0} pid:{1}".format(self.account["qq"], self.pinfo[0]["pid"]))
+            log("successed to close qq:{0} pid:{1}".format(self.account["qq"], self.pinfo[0]["pid"]))
             self.pinfo = [];
         else:
-            print("error:qq:{0}'s pid is none,close failed!!!!".format(self.account["qq"]));
+            log("error:qq:{0}'s pid is none,close failed!!!!".format(self.account["qq"]));

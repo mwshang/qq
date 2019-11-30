@@ -2,10 +2,12 @@
 import time;
 import psutil
 import sched;
+import threading;
 
 from core.qq.qq import QQ;
 from core.chat.chatmgr import ChatMgr;
-from core.utils.config import QQ_LIST,BATCH_MAX_COUNT,BATCH_MAX_DELTA;
+from core.utils.config import QQ_LIST,BATCH_MAX_COUNT,BATCH_MAX_DELTA,LOGIN_MAX_COUNT;
+from core.utils.log import log;
 
 #生成调度器
 scheduler = sched.scheduler(time.time, time.sleep)
@@ -18,9 +20,11 @@ class QQMgr:
 
         self.chatWinTitle = "网赚";
 
-        self.loginCount = 3;#每次登陆的数量
+        self.loginCount = LOGIN_MAX_COUNT;#每次登陆的数量
         self.loginIndex = 0;
         self.executedCount = 0;
+
+        self.scheLoginIndex = None;
 
         self.chatMgr = ChatMgr();
 
@@ -41,6 +45,9 @@ class QQMgr:
         pids = self._collectQQ();
         for pid in pids:
             self.dictPids[pid['pid']] = pid;
+
+    def setChatWinTitle(self,title):
+        self.chatWinTitle = title;
 
     def _collectQQ(self):
         list = []
@@ -89,11 +96,11 @@ class QQMgr:
 
     def _doLogin(self,index):
         qq = self.qqList[index];
-        print("Start to login qq:" + qq.getQQNum());
+        log("Start to login qq:" + qq.getQQNum());
         while not qq.isLogined() and qq.loginQQ():
             time.sleep(3);
             # qq.setPInfo(self.getANewPid());
-            print("Finished to login qq:{0} pid:{1}".format(qq.getQQNum(), qq.getPId()));
+            log("Finished to login qq:{0} pid:{1}".format(qq.getQQNum(), qq.getPId()));
             break;
 
     def _doRun(self):
@@ -104,15 +111,31 @@ class QQMgr:
         flag = self.doLogin();
 
         self.chatMgr.setChatWinTitle(self.chatWinTitle);
-        print("please open the {0} chat window,after 12s to run autochat!!!!! ".format(self.chatWinTitle));
-        time.sleep(12);
+        waitSnd = 12;
+        log("please open the {0} chat window,after {1}s to run autochat!!!!! ".format(self.chatWinTitle,waitSnd));
+        time.sleep(waitSnd);
+        self.runChat(not flag);
+
+    def test(self):
+        scheduler.run();
+
+    def runChat(self,toContinue=True):
+
+        self.clearScheLogin();
+
+        if toContinue:
+            self.scheLoginIndex = scheduler.enter(BATCH_MAX_DELTA, 1, self._doRun);
+            #scheduler.run(False);
+            t = threading.Thread(target=self.test, args=())  # 创建线程
+            #t.setDaemon(True)  # 设置为后台线程，这里默认是False，设置为True之后则主线程不用等待子线程
+            t.start()  # 开启线程
+
         self.chatMgr.run();
-        if flag == False:
-            scheduler.enter(BATCH_MAX_DELTA,1,self._doRun);
+
+
 
     def run(self):
         self._doRun();
-        scheduler.run();
 
     def getANewPid(self):
         # 注意,QQ登陆的时候可能会有多个进程,所以使用数组
@@ -137,7 +160,17 @@ class QQMgr:
     def closeQQ(self,qq):
         self.dictPids[qq.getPId()] = None;
         qq.close();
+        self.clearScheLogin();
 
+    def clearScheLogin(self):
+        if self.scheLoginIndex != None:
+            try:
+                scheduler.cancel(self.scheLoginIndex);
+            except Exception as e:
+                log("clearScheLogin error:");
+                log(e)
+
+            self.scheLoginIndex = None;
 
 if __name__ == "__main__":
     mgr = QQMgr();
