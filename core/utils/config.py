@@ -14,8 +14,8 @@ TULING123_API = "http://www.tuling123.com/openapi/api";
 TULING123_KEY = "6819d331ee444b0c98596a1ed577a5b5";
 
 # 聊天随机范围(单位秒)
-CHAT_MIN_DELTA = 3
-CHAT_MAX_DELTA = 5;
+CHAT_MIN_DELTA = 6;
+CHAT_MAX_DELTA = 20;
 
 # 是否开启日志
 ENABLED_LOG = True;

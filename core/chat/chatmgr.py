@@ -1,5 +1,7 @@
 from time import sleep
 import requests
+import urllib.request
+import re
 
 import win32gui
 import win32api
@@ -52,11 +54,23 @@ class ChatMgr:
             # 回车发送消息
             win32gui.SendMessage(hwnd, win32con.WM_KEYDOWN, win32con.VK_RETURN, 0);
 
-    def getMsg(self,content):
+    def getMsgByTuling(self,content):
         resp = requests.post(TULING123_API, data={"key": TULING123_KEY, "info": content, })
         resp.encoding = 'utf8';
         resp = resp.json();
         return resp['text'];
+
+    def getReply(self,msg):
+        x = urllib.parse.quote(msg)
+        link = urllib.request.urlopen(
+            "http://nlp.xiaoi.com/robot/webrobot?&callback=__webrobot_processMsg&data=%7B%22sessionId%22%3A%22ff725c236e5245a3ac825b2dd88a7501%22%2C%22robotId%22%3A%22webbot%22%2C%22userId%22%3A%227cd29df3450745fbbdcf1a462e6c58e6%22%2C%22body%22%3A%7B%22content%22%3A%22" + x + "%22%7D%2C%22type%22%3A%22txt%22%7D")
+        html_doc = link.read().decode()
+        reply_list = re.findall(r'\"content\":\"(.+?)\\r\\n\"', html_doc)
+        return reply_list[-1];
+
+    def getMsg(self,content):
+        #return self.getReply(content);
+        return self.getMsgByTuling(content);
 
     def getRndReplier(self):
 
@@ -75,12 +89,15 @@ class ChatMgr:
 
         return -1;
 
+
+
     def sendMsg(self,topic,sender,isGetReply=True):
         if isGetReply:
             msg = self.getMsg(topic);
         else:
             msg = topic;
         self.doSendMsg(msg, sender["hwnd"]);
+        return msg;
 
     def _doRun(self):
 
