@@ -69,8 +69,8 @@ class ChatMgr:
         return reply_list[-1];
 
     def getMsg(self,content):
-        #return self.getReply(content);
-        return self.getMsgByTuling(content);
+        return self.getReply(content);
+        #return self.getMsgByTuling(content);
 
     def getRndReplier(self):
 
