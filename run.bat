@@ -1,0 +1,2 @@
+python entry.py
+pause;

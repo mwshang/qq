@@ -136,7 +136,7 @@ class ChatMgr:
                 refreshCount = 0;
 
             refreshCount += 1;
-            if refreshCount > 5 :
+            if refreshCount > 10 :
                 refreshCount = 0;
                 self.collectChatWindows();
 
